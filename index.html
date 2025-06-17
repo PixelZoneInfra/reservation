@@ -1,1 +1,37 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Zamówień Restauracyjnych</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>System Zamówień</h1>
+            <div class="stats">
+                <span id="total-orders">Zamówienia: 0</span>
+                <span id="pending-orders">Oczekujące: 0</span>
+            </div>
+        </header>
 
+        <div class="orders-container">
+            <div class="new-order-form">
+                <h2>Nowe Zamówienie</h2>
+                <input type="text" id="customer-name" placeholder="Nazwa klienta">
+                <textarea id="order-details" placeholder="Szczegóły zamówienia"></textarea>
+                <button onclick="addOrder()">Dodaj Zamówienie</button>
+            </div>
+
+            <div class="orders-queue">
+                <h2>Kolejka Zamówień</h2>
+                <div id="orders-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="alert-overlay" class="alert-overlay"></div>
+    <script src="script.js"></script>
+</body>
+</html>
