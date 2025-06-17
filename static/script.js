@@ -1,111 +1,104 @@
-// Wspólne funkcje dla obu stron
-const STORAGE_KEY = 'restaurant_orders';
-const ORDER_LIMIT_KEY = 'order_limits';
+// Wspólne funkcje dla systemu zamówień - Flask API
 const ORDER_LIMIT_COUNT = 2;
-const ORDER_LIMIT_TIME = 5 * 60 * 1000; // 5 minut w milisekundach
+const ORDER_LIMIT_TIME = 5 * 60 * 1000; // 5 minut
 
-// Funkcja zapisująca zamówienia do localStorage
-function saveOrders(orders) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+// Formatowanie czasu i daty
+export function formatTime(timestamp) {
+  return new Date(timestamp).toLocaleTimeString('pl-PL', {
+    hour: '2-digit', minute: '2-digit'
+  });
 }
 
-// Funkcja pobierająca zamówienia z localStorage
-function getOrders() {
-    const orders = localStorage.getItem(STORAGE_KEY);
-    return orders ? JSON.parse(orders) : [];
+export function getUrlParameter(name) {
+  return new URLSearchParams(window.location.search).get(name);
 }
 
-// Funkcja generująca nowy ID zamówienia
-function generateOrderId() {
-    const orders = getOrders();
-    return orders.length > 0 ? Math.max(...orders.map(o => o.id)) + 1 : 1;
+export function calculateOrderTotal(items) {
+  return items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 }
 
-// Funkcja formatowania czasu
-function formatTime(date) {
-    return new Date(date).toLocaleTimeString('pl-PL', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+// API: Pobierz wszystkie zamówienia (Flask zwraca {active: [], done: []})
+export async function fetchOrders() {
+  const response = await fetch('/api/orders');
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  return response.json();
 }
 
-// Funkcja formatowania daty
-function formatDate(date) {
-    return new Date(date).toLocaleDateString('pl-PL', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
+// API: Złóż nowe zamówienie (POST /api/order - singular!)
+export async function createOrder(orderData) {
+  const response = await fetch('/api/order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      desk: orderData.deskNumber,
+      items: orderData.items.map(item => `${item.name} x${item.quantity}`)
+    })
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || `HTTP error! status: ${response.status}`);
+  }
+  
+  return response.json();
 }
 
-// Funkcja pobierająca parametry z URL
-function getUrlParameter(name) {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get(name);
+// API: Przełącz status zamówienia (PATCH /api/order/:id)
+export async function toggleOrderStatus(id) {
+  const response = await fetch(`/api/order/${id}`, { 
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  
+  return response.json();
 }
 
-// Funkcje zarządzania limitami zamówień
-function getOrderLimits() {
-    const limits = localStorage.getItem(ORDER_LIMIT_KEY);
-    return limits ? JSON.parse(limits) : {};
-}
-
-function saveOrderLimits(limits) {
-    localStorage.setItem(ORDER_LIMIT_KEY, JSON.stringify(limits));
-}
-
-function checkOrderLimit(deskNumber) {
-    const limits = getOrderLimits();
-    const deskLimits = limits[deskNumber];
-    
-    if (!deskLimits) {
-        return { allowed: true, remaining: ORDER_LIMIT_COUNT, timeRemaining: 0 };
-    }
-    
-    const now = Date.now();
-    
-    // Usuń stare wpisy (starsze niż 5 minut)
-    const validOrders = deskLimits.filter(timestamp => now - timestamp < ORDER_LIMIT_TIME);
-    
-    if (validOrders.length !== deskLimits.length) {
-        limits[deskNumber] = validOrders;
-        saveOrderLimits(limits);
-    }
-    
-    const remaining = ORDER_LIMIT_COUNT - validOrders.length;
-    let timeRemaining = 0;
-    
-    if (remaining <= 0 && validOrders.length > 0) {
-        const oldestOrder = Math.min(...validOrders);
-        timeRemaining = ORDER_LIMIT_TIME - (now - oldestOrder);
-    }
-    
-    return {
-        allowed: remaining > 0,
-        remaining: Math.max(0, remaining),
-        timeRemaining: Math.max(0, timeRemaining)
+// API: Sprawdź limit zamówień dla stolika (GET /api/limit/:desk)
+export async function checkOrderLimit(desk) {
+  if (!desk) {
+    return { 
+      allowed: true, 
+      remaining: ORDER_LIMIT_COUNT, 
+      timeRemaining: 0 
     };
+  }
+  
+  const response = await fetch(`/api/limit/${desk}`);
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  
+  const data = await response.json();
+  
+  return {
+    allowed: data.remaining > 0,
+    remaining: data.remaining,
+    timeRemaining: data.reset_in_sec || 0
+  };
 }
 
-function addOrderToLimit(deskNumber) {
-    const limits = getOrderLimits();
-    
-    if (!limits[deskNumber]) {
-        limits[deskNumber] = [];
+// Parsowanie items ze stringa (format: "Item1 x2,Item2 x1")
+export function parseItemsString(itemsString) {
+  if (!itemsString) return [];
+  
+  return itemsString.split(',').map(item => {
+    const trimmed = item.trim();
+    const match = trimmed.match(/^(.+?)\s+x(\d+)$/);
+    if (match) {
+      return {
+        name: match[1].trim(),
+        quantity: parseInt(match[2])
+      };
     }
-    
-    limits[deskNumber].push(Date.now());
-    saveOrderLimits(limits);
-}
-
-// Funkcja formatowania czasu pozostałego
-function formatTimeRemaining(milliseconds) {
-    const minutes = Math.floor(milliseconds / 60000);
-    const seconds = Math.floor((milliseconds % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
-// Funkcja obliczająca sumę zamówienia
-function calculateOrderTotal(items) {
-    return items.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return {
+      name: trimmed,
+      quantity: 1
+    };
+  });
 }
