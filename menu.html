@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu - Złóż Zamówienie</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="menu.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Menu Restauracji</h1>
+            <div class="desk-info">
+                <span>Stolik: <span id="desk-number">-</span></span>
+                <span id="order-limit-info"></span>
+            </div>
+        </header>
+
+        <div class="menu-container">
+            <form id="order-form" class="menu-form">
+                <div id="menu-categories"></div>
+                
+                <div class="order-summary" id="order-summary">
+                    <h3>Podsumowanie Zamówienia</h3>
+                    <div id="summary-items"></div>
+                    <div class="total-price">
+                        <strong>Suma: <span id="total-price">0.00</span> PLN</strong>
+                    </div>
+                </div>
+
+                <div class="customer-info">
+                    <input type="text" id="customer-name" placeholder="Twoje imię" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="clear-order">Wyczyść</button>
+                    <button type="submit" id="submit-order">Złóż Zamówienie</button>
+                </div>
+            </form>
+            
+            <div class="order-confirmation" id="order-confirmation">
+                <h2>Zamówienie Przyjęte!</h2>
+                <p>Twoje zamówienie zostało przekazane do realizacji.</p>
+                <p>Numer zamówienia: <span id="confirmation-order-id"></span></p>
+                <p>Suma: <span id="confirmation-total"></span> PLN</p>
+                <button id="new-order-btn">Nowe Zamówienie</button>
+            </div>
+
+            <div class="order-limit-warning" id="order-limit-warning">
+                <h2>Limit Zamówień</h2>
+                <p>Osiągnięto maksymalną liczbę zamówień dla tego stolika.</p>
+                <p>Możesz złożyć kolejne zamówienie za: <span id="remaining-time"></span></p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script src="menu-data.js"></script>
+    <script src="menu.js"></script>
+</body>
+</html>
